@@ -58,6 +58,9 @@ defmodule Chat.Server do
       true ->
         peers = Enum.uniq([node_name | state.peers])
         IO.puts("[system] Connected to #{node_name}")
+        # Notify the remote server to add us back — this makes the connection
+        # bidirectional without the other user having to /connect manually.
+        GenServer.cast({__MODULE__, node_name}, {:add_peer, Node.self()})
         {:reply, :ok, %{state | peers: peers}}
 
       _ ->
@@ -80,6 +83,13 @@ defmodule Chat.Server do
     end)
 
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:add_peer, node_name}, state) do
+    peers = Enum.uniq([node_name | state.peers])
+    IO.puts("\r[system] #{node_name} connected to you")
+    {:noreply, %{state | peers: peers}}
   end
 
   @impl true
