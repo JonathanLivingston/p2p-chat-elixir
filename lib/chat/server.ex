@@ -22,7 +22,7 @@ defmodule Chat.Server do
   def start_link(_opts) do
     # Registers the process under the module name so any code can reach it
     # with GenServer.call(Chat.Server, ...) instead of needing the PID.
-    GenServer.start_link(__MODULE__, %{peers: []}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{peers: [], messages: []}, name: __MODULE__)
   end
 
   @doc "Connect to a remote node by atom name, e.g. :bob@myhostname"
@@ -38,6 +38,11 @@ defmodule Chat.Server do
   @doc "Return the list of connected peer nodes."
   def peers do
     GenServer.call(__MODULE__, :peers)
+  end
+
+  @doc "Return the message history as a list of {from, text, timestamp} tuples."
+  def history do
+    GenServer.call(__MODULE__, :history)
   end
 
   # ---------------------------------------------------------------------------
@@ -74,6 +79,11 @@ defmodule Chat.Server do
   end
 
   @impl true
+  def handle_call(:history, _from, state) do
+    {:reply, state.messages, state}
+  end
+
+  @impl true
   def handle_cast({:send_message, text}, state) do
     # Send the message to every peer's Chat.Server process.
     # {Chat.Server, peer_node} is a "remote name" — Erlang will route it
@@ -82,8 +92,8 @@ defmodule Chat.Server do
       GenServer.cast({__MODULE__, peer}, {:incoming_message, text, Node.self()})
     end)
 
-    {:noreply, state}
-  end
+    entry = {Node.self(), text, DateTime.utc_now()}
+    {:noreply, %{state | messages: state.messages ++ [entry]}}
 
   @impl true
   def handle_cast({:add_peer, node_name}, state) do
@@ -96,6 +106,6 @@ defmodule Chat.Server do
   def handle_cast({:incoming_message, text, from_node}, state) do
     # \r moves to line start so the prompt gets overwritten cleanly.
     IO.puts("\r[#{from_node}] #{text}")
-    {:noreply, state}
-  end
+    entry = {from_node, text, DateTime.utc_now()}
+    {:noreply, %{state | messages: state.messages ++ [entry]}}
 end

@@ -22,7 +22,7 @@ defmodule Chat.CLI do
     ║       Elixir P2P Chat        ║
     ╚══════════════════════════════╝
     Your node : #{my_node}
-    Commands  : /connect <name>, /peers, /help, /quit
+    Commands  : /connect <name>, /peers, /history, /help, /quit
     """)
 
     # The node name "alice@host" → short name "alice" used as the prompt.
@@ -58,6 +58,7 @@ defmodule Chat.CLI do
       /connect <name>       Connect to node on this machine (e.g. /connect bob)
       /connect <name@host>  Connect to node on another machine
       /peers                List connected peers
+      /history              Print all messages from this session
       /quit                 Exit
       <message>             Send message to all peers
     """)
@@ -67,6 +68,21 @@ defmodule Chat.CLI do
     case Chat.Server.peers() do
       [] -> IO.puts("[system] No connected peers yet.")
       peers -> IO.puts("[system] Peers: #{Enum.join(peers, ", ")}")
+    end
+  end
+
+  defp dispatch("/history") do
+    case Chat.Server.history() do
+      [] ->
+        IO.puts("[system] No messages yet.")
+
+      messages ->
+        IO.puts("[system] --- history ---")
+        Enum.each(messages, fn {from, text, timestamp} ->
+          time = Calendar.strftime(timestamp, "%H:%M:%S")
+          IO.puts("  [#{time}] #{from}: #{text}")
+        end)
+        IO.puts("[system] --- end ---")
     end
   end
 

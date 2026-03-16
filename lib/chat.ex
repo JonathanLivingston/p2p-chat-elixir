@@ -8,11 +8,7 @@ defmodule Chat do
 
   ## Examples
 
-      iex> Chat.hello()
-      :world
+      iex> Chat.CLI.run()
 
   """
-  def hello do
-    :world
-  end
 end
