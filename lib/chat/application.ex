@@ -10,7 +10,11 @@ defmodule Chat.Application do
     children = [
       # Chat.Server is a GenServer — the supervisor will start it and
       # automatically restart it if it ever crashes (fault tolerance!).
-      Chat.Server
+      Chat.Server,
+      # Stack's child directly
+      {Stack, ""},
+      # Weather's child directly
+      Weather
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

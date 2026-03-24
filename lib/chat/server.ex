@@ -94,6 +94,7 @@ defmodule Chat.Server do
 
     entry = {Node.self(), text, DateTime.utc_now()}
     {:noreply, %{state | messages: state.messages ++ [entry]}}
+  end
 
   @impl true
   def handle_cast({:add_peer, node_name}, state) do
@@ -108,4 +109,6 @@ defmodule Chat.Server do
     IO.puts("\r[#{from_node}] #{text}")
     entry = {from_node, text, DateTime.utc_now()}
     {:noreply, %{state | messages: state.messages ++ [entry]}}
+  end
+
 end
