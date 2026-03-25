@@ -11,16 +11,50 @@ defmodule Weather do
     GenServer.call(__MODULE__, {:refresh, city})
   end
 
+  def refresh_async(city) do
+    GenServer.cast(__MODULE__, {:refresh_async, city})
+  end
+
   @impl true
-  def init(_opts) do
-    {:ok, %{}}
+  def init(state) do
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_info({_ref, {:ok, data, _status}}, state) do
+    {:noreply, Map.merge(state, %{data.city => data})}
+  end
+
+  @impl true
+  def handle_info({_ref, {:error, error_msg, _status}}, state) do
+    IO.puts("Error fetching weather data: #{error_msg}")
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:DOWN, _ref, :process, _pid, _status}, state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:refresh_async, city}, state) do
+    Task.Supervisor.async_nolink(Weather.TaskSupervisor, fn ->
+      weather_data = fetch_weather_data(city)
+
+      case weather_data do
+        %{error: reason} -> {:error, reason, state}
+        data -> {:ok, data, Map.merge(state, %{city => weather_data})}
+      end
+    end)
+
+    {:noreply, state}
   end
 
   @impl true
   def handle_call({:refresh, city}, _from, state) do
     # Simulate fetching weather data for the city
     weather_data = fetch_weather_data(city)
-    {:reply, weather_data, state}
+    {:reply, weather_data, Map.merge(state, %{city => weather_data})}
   end
 
   defp fetch_weather_data(city) do
@@ -50,12 +84,13 @@ defmodule Weather do
           city: city,
           temperature: "#{current["temperature"]} #{current_units["temperature"]}",
           cloud_cover: "#{current["cloud_cover"]} #{current_units["cloud_cover"]}",
-          condition: case round(current["cloud_cover"]) do
-            0 -> "Clear"
-            v when v in 1..50 -> "Partly Cloudy"
-            100 -> "Can't see any sun"
-            _ -> "Cloudy"
-          end
+          condition:
+            case round(current["cloud_cover"]) do
+              0 -> "Clear"
+              v when v in 1..50 -> "Partly Cloudy"
+              100 -> "Can't see any sun"
+              _ -> "Cloudy"
+            end
         }
 
       {:error, reason} ->

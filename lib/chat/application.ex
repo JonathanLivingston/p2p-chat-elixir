@@ -14,7 +14,9 @@ defmodule Chat.Application do
       # Stack's child directly
       {Stack, ""},
       # Weather's child directly
-      Weather
+      Weather,
+
+      {Task.Supervisor, name: Weather.TaskSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
